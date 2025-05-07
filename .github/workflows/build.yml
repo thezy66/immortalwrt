@@ -1,0 +1,127 @@
+name: Build RAX3000M OpenWrt
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential ccache ecj fastjar file g++ gawk \
+            gettext git java-propose-classpath libelf-dev libncurses5-dev \
+            libncursesw5-dev libssl-dev python3 unzip wget zlib1g-dev
+
+      - name: Load custom feeds
+        run: |
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Customize .config
+        run: |
+          cat > .config <<EOF
+CONFIG_TARGET_mediatek=y
+CONFIG_TARGET_mediatek_mt7981=y
+CONFIG_TARGET_mediatek_mt7981_DEVICE_cmcc_rax3000m=y
+
+# LuCI 及中文界面
+CONFIG_PACKAGE_luci=y
+CONFIG_LUCI_LANG_zh_Hans=y
+CONFIG_PACKAGE_luci-ssl-openssl=y
+
+# 科学上网
+CONFIG_PACKAGE_luci-app-passwall=y
+CONFIG_PACKAGE_luci-app-openclash=y
+
+# 文件共享与下载
+CONFIG_PACKAGE_luci-app-samba4=y
+CONFIG_PACKAGE_luci-app-ftp=y
+CONFIG_PACKAGE_luci-app-aria2=y
+
+# 应用商店（iStore）
+CONFIG_PACKAGE_luci-app-store=y
+
+# USB 支持及自动挂载
+CONFIG_PACKAGE_kmod-usb-core=y
+CONFIG_PACKAGE_kmod-usb-ohci=y
+CONFIG_PACKAGE_kmod-usb2=y
+CONFIG_PACKAGE_kmod-usb3=y
+CONFIG_PACKAGE_kmod-usb-storage=y
+CONFIG_PACKAGE_kmod-usb-storage-uas=y
+CONFIG_PACKAGE_block-mount=y
+CONFIG_PACKAGE_autosamba=y
+CONFIG_PACKAGE_luci-app-usb-printer=y
+CONFIG_PACKAGE_luci-app-diskman=y
+
+# 硬盘相关
+CONFIG_PACKAGE_kmod-fs-exfat=y
+CONFIG_PACKAGE_kmod-fs-ntfs3=y
+CONFIG_PACKAGE_luci-app-hd-idle=y
+
+# 定时重启
+CONFIG_PACKAGE_luci-app-autoreboot=y
+
+# NTP时间同步及服务器切换
+CONFIG_PACKAGE_luci-app-ntpc=y
+CONFIG_PACKAGE_ntpclient=y
+CONFIG_PACKAGE_luci-app-timecontrol=y
+
+# 可视化监控/美化面板
+CONFIG_PACKAGE_luci-app-info=y
+CONFIG_PACKAGE_luci-app-webadmin=y
+CONFIG_PACKAGE_luci-app-statistics=y
+CONFIG_PACKAGE_luci-theme-argon=y
+CONFIG_PACKAGE_luci-app-argon-config=y
+CONFIG_PACKAGE_luci-app-netdata=y
+
+# 网络相关
+CONFIG_PACKAGE_luci-app-ddns=y
+CONFIG_PACKAGE_luci-app-upnp=y
+CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_ShadowsocksR_Server=y
+
+# 无线中继/桥接
+CONFIG_PACKAGE_luci-app-relayd=y
+CONFIG_PACKAGE_luci-proto-relay=y
+
+# IPv6 支持
+CONFIG_IPV6=y
+CONFIG_PACKAGE_dnsmasq_full_dhcpv6=y
+CONFIG_PACKAGE_ip6tables=y
+CONFIG_PACKAGE_kmod-ip6tables=y
+CONFIG_PACKAGE_kmod-ipt-nat6=y
+CONFIG_PACKAGE_kmod-iptunnel6=y
+CONFIG_PACKAGE_kmod-sit=y
+CONFIG_PACKAGE_6in4=y
+
+# 硬件加速及性能
+CONFIG_KERNEL_NETFILTER=y
+CONFIG_KERNEL_NETFILTER_ADVANCED=y
+CONFIG_KERNEL_CGROUPS=y
+CONFIG_CGROUPS=y
+CONFIG_PACKAGE_fullconenat=y
+CONFIG_PACKAGE_luci-app-fullconenat=y
+
+# 编译日志
+CONFIG_DEVEL=y
+CONFIG_BUILD_LOG=y
+EOF
+
+      - name: Download & Prepare Toolchain
+        run: |
+          make defconfig
+          make download -j8 || make download -j1 V=s
+
+      - name: Compile the firmware
+        run: |
+          make -j$(nproc) || make -j1 V=s
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v3
+        with:
+          name: RAX3000M_firmware
+          path: bin/targets/
