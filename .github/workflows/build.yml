@@ -121,7 +121,7 @@ jobs:
           make -j$(nproc) || make -j1 V=s
 
       - name: Upload firmware
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: RAX3000M_firmware
           path: bin/targets/
