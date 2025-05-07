@@ -25,6 +25,11 @@ jobs:
             gettext git java-propose-classpath libelf-dev libncurses5-dev \
             libncursesw5-dev libssl-dev python3 unzip wget zlib1g-dev
 
+      - name: Clean up unnecessary files to free space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /usr/lib/jvm
+          df -h
+
       - name: Load custom feeds
         run: |
           ./scripts/feeds update -a
