@@ -10,6 +10,14 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v3
 
+# 添加清理步骤（关键！）
+      - name: Cleanup temporary files
+        run: |
+          sudo rm -rf /usr/local/lib/android/  # 示例：清理 Android SDK（如无需 Android 构建）
+          go clean -modcache                   # 清理 Go 模块缓存
+          sudo apt-get clean                   # 清理 APT 缓存
+          df -h                                # 查看清理后的磁盘空间
+
       - name: Install dependencies
         run: |
           sudo apt update
